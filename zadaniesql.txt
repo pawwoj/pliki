@@ -1,0 +1,186 @@
+-- 1. Utworz tabele
+
+CREATE TABLE world.klient (idklienta int not null auto_increment primary key, imie varchar(20), nazwisko varchar(30));
+CREATE TABLE world.zamowienie (idzamowienia int not null auto_increment primary key,  idklienta int not null, idksiazki int not null, datazamowienia date);
+CREATE TABLE world.ksiazka (idksiazki int not null auto_increment primary key,  tytul varchar(20), autor varchar(30), cena int);
+
+-- 2. Uzupelnij je danymi (dołóz dane od siebie)
+
+INSERT INTO klient VALUES(null, 'Tomek', 'Jankowski');
+INSERT INTO klient VALUES(null, 'Ania', 'Grzeszczak'), (null, 'Krzys', 'Lewandowski'), (null, 'Robert', 'Nieznany');
+
+INSERT INTO ksiazka VALUES(null, "ogniem i mieczem", "Sienkiewicz", 50);
+INSERT INTO ksiazka VALUES(null, "Pan Tadeusz", "Mickiewicz", 30);
+INSERT INTO ksiazka VALUES(null, "Pan Samochodzik", "Niziurski", 20);
+INSERT INTO ksiazka VALUES(null, "Harry Potter", "Rowling", 70);
+
+INSERT INTO zamowienie VALUES(null, 1, 1, '2009-11-11');
+INSERT INTO zamowienie VALUES(null, 1, 2, '2004-05-16');
+INSERT INTO zamowienie VALUES(null, 1, 3, '2006-11-18');
+INSERT INTO zamowienie VALUES(null, 2, 3, '2021-05-28');
+INSERT INTO zamowienie VALUES(null, 2, 4, '2020-06-04');
+INSERT INTO zamowienie VALUES(null, 3, 2, '2009-01-19');
+INSERT INTO zamowienie VALUES(null, 4, 4, '2009-08-30');
+
+-- 3. Napisz polecenia SQL
+
+-- książki ułożone alfabetycznie wg tytulu
+SELECT * FROM world.ksiazka order by tytul;
+
+-- najdrozsza ksiazka w bazie
+SELECT * FROM world.ksiazka where cena = (select MAX(cena) FROM world.ksiazka); 
+
+-- wszystkie wyslane zamowienia
+-- (dodanie kolumny status - ALTER TABLE world.zamowienie ADD status varchar(20);)
+select * from world.zamowienie where status = 'wyslano';
+
+-- wszystkich klientow o nazwisku Rutkowski
+select * from world.klient where nazwisko = 'Rutkowski';
+
+-- ksiazki zawierajace PHP w tytule
+SELECT * FROM world.ksiazka WHERE tytul LIKE '%PHP%';
+
+-- najwczesniej dokonane zamowienia
+select * from world.zamowienie where datazamowienia = (select min(datazamowienia) from world.zamowienie);
+
+-- z użyciem podzapytania: najdroższa ksiązka w bazie (podpowiedź UNION) XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+-- dodaje nową tebelę z książkami
+(CREATE TABLE world.XksiazkaX (idksiazki int not null auto_increment primary key,  tytul varchar(20), autor varchar(30), cena int);)
+SELECT * FROM world.ksiazka 
+UNION ALL 
+SELECT * FROM world.XksiazkaX  order by cena desc limit 1;
+
+-- ktore osoby zamowily ksiazke nr 2
+select * from klient 
+where idklienta in 
+(select idklienta from zamowienie where idksiazki =2); 
+
+-- jakie ksiazki zamowila osoba nr 4
+select * from ksiazka 
+where idksiazki in 
+(select idksiazki from zamowienie where idklienta = 4); 
+
+-- jakie ksiazki zamowila osoba o nazwisku Lewandowski
+select * from ksiazka where idksiazki in 
+(select idksiazki from zamowienie where idklienta = 
+(select idklienta from klient where nazwisko = 'Lewandowski')); 
+
+-- z uzyciem klauzuli LEFT JOIN: znajdz imiona i nazwiska klientow, ktorzy niczego nie zamowili (beda mieli wartosc null dla id zamowienia)
+SELECT imie, nazwisko
+FROM klient
+LEFT JOIN zamowienie ON klient.idklienta = zamowienie.idklienta 
+where idzamowienia is null;
+
+-- Zmień nazwisko osoby nr 1 na “Kowalczyk”
+UPDATE klient
+SET nazwisko='Kowalczyk'
+WHERE idklienta = 1;
+
+XXXXXXXXXXXXXXX
+-- Spróbuj zmienić idklienta osoby nr 3 na wartość 1 ????????????????????????
+UPDATE klient
+SET idklienta = 1
+WHERE idklienta = 3;
+
+-- Zwiększ cenę wszystkich książek w bazie o 10%
+UPDATE ksiazka
+SET cena = cena *1.1;
+
+-- Zmniejsz cenę najdroższej książki o 10 zł
+UPDATE ksiazka
+	SET cena = cena - 10
+		where idksiazki in 
+			(select idksiazki from
+				(select idksiazki from ksiazka where 
+					cena = (select max(cena) from ksiazka)) as id);
+
+-- Zmień imię i nazwisko klientki Anny Kareniny na: “Joanna Dostojewska”
+update klient 
+	set imie = 'Joanna',nazwisko= 'Dostojewska'
+		where imie = 'Anna' and nazwisko = 'Karenina';
+ 
+-- Zmień status zamówień o numerach 3-5 na “wyslano
+update zamowienie 
+	set status = 'wyslano'
+		where idzamowienia between 3 and 5;
+ 
+-- Dodaj nowego klienta: Franciszek Janowski z Chorzowa // z Chorzowa
+insert into klient values (null, 'Franciszek', 'Janowski');
+
+-- Dodaj nowe zamówienie: Artur Rutkowski zamówił książkę: “HTML 5. Tworzenie gier”
+insert into zamowienie values 
+(null, 
+	(select idklienta from klient where imie = 'Artur' and nazwisko = 'Rutkowski'), 
+		(select idksiazki from ksiazka where tytul = 'HTML 5. Tworzenie gier'), 
+			'2021-12-20', 
+				null);
+-- Wstaw do bazy książkę o tytule: “Symfonia C++” autora o nazwisku Grębosz, ale nie wstawiaj jeszcze imienia autora ani ceny książki
+/* dostosowanie tabeli - 	ALTER TABLE ksiazka ADD imie varchar(20);
+							ALTER TABLE ksiazka RENAME COLUMN autor TO nazwisko;
+							ALTER TABLE ksiazka CHANGE COLUMN `imie` `imie` VARCHAR(20) NULL DEFAULT NULL AFTER `tytul`;
+							*/
+insert into ksiazka value (null, 'Symfonia C++', null, 'Grębosz', null);							
+							
+-- Dodaj dwóch nowych klientów za pomocą jednego zapytania
+insert into klient value 
+	(null, 'Aleksandra', 'Dupczyńska'), 
+	(null, 'Monika', 'Ciągutka');
+
+XXXXXXXXXX
+-- Spróbuj wstawić do tabeli klienci nową osobę o id równym 5
+insert into klient value (5, 'Sylwia', 'Krasna');
+
+
+-- Wstaw nową osobę używając klauzuli SET
+INSERT INTO klient SET idklienta = null, imie = 'Imieset', nazwisko = 'Nazwiskoset';
+
+-- Dodaj do bazy tabelę o nazwie “promocje” zawierającą następujące dane:
+-- ○ idpromocji (klucz podstawowy, typ integer)
+-- ○ idksiazki (typu integer)
+-- ○ rodzajpromocji (typu text)
+-- ○ cenawpromocji (typu float)
+CREATE TABLE promocje (
+    idpromocji int NOT NULL PRIMARY KEY auto_increment,
+    idksiazki int,
+    rodzajpromocji text(1000),
+    cenawpromocji float);
+	
+--  2. Dodaj trzy nowe wiersze do tej tabeli przy pomocy jednego zapytania SQL
+insert into promocje value 
+	(null, 1, 'wyprzedaz', 18.99), 
+	(null, 5, 'powystawowa', 25),
+    (null, 4, 'przedsprzedaz', 59.99);
+	
+--  3. Zmień cenę trzeciej książki w promocji na 15.99 PLN i rodzaj jej promocji na “świąteczna”
+update promocje 
+	set cenawpromocji = 15.99, rodzajpromocji = 'świąteczna'
+		where idpromocji = 3;
+
+--  4. Zmień nazwę kolumny ”rodzajpromocji” na “rodzaj” (a potem przywróć dawną nazwę)
+ALTER TABLE promocje RENAME COLUMN rodzajpromocji TO rodzaj;
+ALTER TABLE promocje RENAME COLUMN rodzaj TO rodzajpromocji;
+
+--  5. Zmień typ danych kolumny “rodzajpromocji” na longtext
+ALTER TABLE promocje MODIFY COLUMN rodzajpromocji longtext;
+
+--  6. Usuń z tabeli “promocje” kolumnę “rodzajpromocji”
+ALTER TABLE promocje DROP COLUMN rodzajpromocji; 
+
+--  7. Usuń z tabeli “promocje” klucz podstawowy
+ALTER TABLE promocje MODIFY idpromocji INT NOT NULL;
+ALTER TABLE promocje DROP PRIMARY KEY;
+
+--  8. Ponownie dodaj do tabeli “promocje” klucz podstawowy “idpromocji”
+ALTER TABLE promocje MODIFY idpromocji INT NOT NULL PRIMARY KEY AUTO_INCREMENT;
+
+--  9. Dodaj na końcu nową kolumnę “aktualna” i ustaw typ danych na “boolean”
+ALTER TABLE promocje ADD aktualna boolean;
+
+ -- 10. Wstaw do wszystkich wartości w kolumnie “aktualna” wartość TRUE
+update promocje set aktualna = true;
+
+ -- 11. Usuń całą tabelę “promocje”
+ DROP TABLE promocje; 
+ 
+ -- 12. Usuń jeden rekord z tabeli zamowienia o id równym 1
+ DELETE FROM zamowienie WHERE idzamowienia = 1;
